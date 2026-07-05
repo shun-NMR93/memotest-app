@@ -47,7 +47,7 @@ class SQLiteMemoRepository: MemoRepositoryProtocol {
             return nil
         }
         
-        sqlite3_bind_text(statement, 1, id.uuidString, -1, nil)
+        sqlite3_bind_text(statement, 1, id.uuidString, -1, SQLITE_TRANSIENT)
 
         if sqlite3_step(statement) == SQLITE_ROW {
             
@@ -66,13 +66,15 @@ class SQLiteMemoRepository: MemoRepositoryProtocol {
                 updatedAt: updatedAt
             )
         }
+        
+        sqlite3_finalize(statement)
+        return result
     }
     
     func loadAll() -> [Memo] {
         
         let sql = """
-        SELECT *
-        FROM memo
+        SELECT * FROM memo
         """
         
         var memos: [Memo] =[]
@@ -84,10 +86,10 @@ class SQLiteMemoRepository: MemoRepositoryProtocol {
             return []
         }
         
-        while sqlite3_step(statement) == SQLitw {
+        while sqlite3_step(statement) == SQLITE_ROW {
             
-            let idStering = String(cString: sqlite3_column_text(statement, 0))
-            let title = String(cString: sqlite3_column_int(statement, 1))
+            let idString = String(cString: sqlite3_column_text(statement, 0))
+            let title = String(cString: sqlite3_column_text(statement, 1))
             let body = String(cString: sqlite3_column_text(statement, 2))
             
             let createdAt = Date(timeIntervalSince1970: sqlite3_column_double(statement, 3))
@@ -112,9 +114,36 @@ class SQLiteMemoRepository: MemoRepositoryProtocol {
         
     func delete(_ id: UUID) {
         
+        let sql = """
+        DELETE FROM memo WHERE id = ?
+        """
+        
+        let bindings = [
+            id.uuidString
+        ]
+        
+        DatabaseManager.shared.executeSQL(sql, bindings: bindings)
+        
     }
     
     func update(_ memo: Memo) {
         
+        let sql = """
+            UPDATE memo
+            SET
+                title = ?,
+                body = ?,
+                updatedAt = ?
+            WHERE id = ?
+            """
+        
+        let bindings = [
+            memo.title,
+            memo.body,
+            memo.updatedAt.timeIntervalSince1970,
+            memo.id.uuidString
+        ]
+        
+        DatabaseManager.shared.executeSQL(sql, bindings: bindings)
     }
 }

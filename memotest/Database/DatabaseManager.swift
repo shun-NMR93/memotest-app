@@ -7,14 +7,34 @@
 
 import SQLite3
 
+let SQLITE_TRANSIENT = unsafeBitCast(
+    -1,
+    to: sqlite3_destructor_type.self
+)
+
 final class DatabaseManager {
     
     static let shared = DatabaseManager()
 
-    private var db: OpaquePointer?
+    private(set) var db: OpaquePointer?
     
     private init() {
         openDatabase()
+        createTable()
+    }
+    
+    private func createTable() {
+        let sql = """
+        CREATE TABLE IF NOT EXISTS memo (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            body TEXT NOT NULL,
+            createdAt REAL NOT NULL,
+            updatedAt REAL NOT NULL
+        )
+        """
+
+        executeSQL(sql, bindings: [])
     }
     
     private func openDatabase() {
@@ -44,7 +64,7 @@ final class DatabaseManager {
             let position = Int32(index + 1)
             
             if let v = value as? String {
-                sqlite3_bind_text(statement, position, v, -1, nil)
+                sqlite3_bind_text(statement, position, v, -1, SQLITE_TRANSIENT)
             } else if let v = value as? Double {
                 sqlite3_bind_double(statement, position, v)
             } else if let v = value as? Int {
