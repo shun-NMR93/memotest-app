@@ -5,6 +5,7 @@
 //  Created by nomushun on 2026/07/02.
 //
 
+import Foundation
 import SQLite3
 
 let SQLITE_TRANSIENT = unsafeBitCast(
@@ -19,11 +20,13 @@ final class DatabaseManager {
     private(set) var db: OpaquePointer?
     
     private init() {
+        print("DatabaseManager init")
         openDatabase()
         createTable()
     }
     
     private func createTable() {
+        print("createTable called")
         let sql = """
         CREATE TABLE IF NOT EXISTS memo (
             id TEXT PRIMARY KEY,
@@ -38,10 +41,15 @@ final class DatabaseManager {
     }
     
     private func openDatabase() {
-        let fileURL = try! FileManager.default
-            .url(for: .documentDirectory, in: .userDomainMask)
-            .first!
-            .appendingPathComponent("memotest.sqlite")
+        let fileURL: URL
+        do {
+            fileURL = try FileManager.default
+                .url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+                .appendingPathComponent("memotest.sqlite")
+        } catch {
+            print("Failed to get document directory: \(error)")
+            return
+        }
         
         if sqlite3_open(fileURL.path, &db) != SQLITE_OK {
             print("DB open failed")
@@ -52,7 +60,13 @@ final class DatabaseManager {
     
     func executeSQL(_ sql: String, bindings: [Any]) {
         
+        print("executeSQL: \(sql)")
         var statement: OpaquePointer?
+
+        guard let db = db else {
+            print("Database is not open")
+            return
+        }
 
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else {
             print("prepare error")

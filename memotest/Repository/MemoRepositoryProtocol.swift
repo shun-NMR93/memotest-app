@@ -4,6 +4,7 @@
 //
 //  Created by nomushun on 2026/07/02.
 //
+import Foundation
 
 protocol MemoRepositoryProtocol {
     func save(_ memo: Memo)
